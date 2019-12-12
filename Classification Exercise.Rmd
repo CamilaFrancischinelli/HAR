@@ -1,0 +1,94 @@
+# Human Activity Recognition
+
+This project aims to apply Machine Learning Techniques to develop an algorithm to classify activities performed by different subjects on the dataset collected in the link below:
+
+<a href=http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har>http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har</a>
+
+## 1. Setup
+```{r setup, echo=TRUE, message=FALSE}
+rm(list=ls())
+
+library(caret)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+
+setwd("C:/Users/cmffe/OneDrive - Vestas Wind Systems A S/Documents/R/Practical Machine Learning - Coursera/Assignment")
+
+
+```
+
+
+## 2. Reading the dataset
+```{r read, echo=TRUE, message=FALSE}
+HAR <- read_csv("pml-training.csv", col_names = TRUE)
+```
+
+
+## 3. Performing Data Partition
+```{r data_partition, echo=TRUE}
+set.seed(123)
+inTrain <- createDataPartition(y = HAR$X1, p = 0.5, list = FALSE)
+training <- HAR[inTrain,]
+testing <- HAR[-inTrain,]
+```
+
+
+
+## 4. Looking for NA values and cleaning up the database
+
+Checking for columns with over 80% of NA values and filtering them out.
+```{r NAs, echo=TRUE}
+NAcols <- data.frame(variable = colnames(training), percentage_NA = colSums(is.na(training))/nrow(training))
+NAcols <- NAcols %>% filter(percentage_NA > 0.8)
+count(NAcols)
+
+training <- training %>%
+  select_if(~ !any(is.na(.)))
+```
+
+
+## 5. Looking for correlations between time and classe
+```{r time1, echo=TRUE}
+p1 <- ggplot(training, aes(x = raw_timestamp_part_1, y = classe)) + geom_point() + ggtitle("Timestamp vs Classe")
+p2 <- ggplot(training, aes(x = raw_timestamp_part_2, y = classe)) + geom_point() + ggtitle("Timestamp vs Classe")
+grid.arrange(p1, p2, nrow = 1)
+p1 <- ggplot(training, aes(x = num_window, y = classe)) + geom_point() + ggtitle("Window vs Classe")
+p2 <- ggplot(training, aes(x = new_window, y = classe)) + geom_point() + ggtitle("Window vs Classe")
+grid.arrange(p1, p2, nrow = 1)
+```
+
+Since we couldn't detect a strong correlation between time and classe, we will exclude these variables from our prediction model
+```{r time2, echo=TRUE}
+training <- training[,-c(1,2,3,4,5,6,7)]
+```
+
+
+## 6. Training our models
+
+First we will try to preprocess our data and then use the method rpart to build a classification tree
+```{r rpart, echo=TRUE}
+preProc <- preProcess(training[, -53], method = c("center", "scale"))
+trainTransformed <- predict(preProc, training)
+testTransformed <- predict(preProc, testing)
+modelFit <- train(classe ~ ., method = "rpart", data = trainTransformed)
+modelFit
+A <- table(testTransformed$classe, predict(modelFit, newdata = testTransformed))
+A
+sum(diag(A))/sum(A)
+```
+
+
+The accuracy is below 50% in the train and in the test sets, therefore this model isn't good enough for this dataset.
+
+We will now fit a boosted tree model to see if accuracy can be improved.
+```{r gbm, echo=TRUE}
+modelFit <- train(classe ~ ., method = "gbm", data = training, verbose = FALSE)
+modelFit
+A <- table(testing$classe, predict(modelFit, newdata = testing))
+A
+sum(diag(A))/sum(A)
+```
+
+Processing time is considerably higher but it is a good trade off for the increase in accuracy, therefore we will use this option.
