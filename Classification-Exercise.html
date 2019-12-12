@@ -210,6 +210,8 @@ setwd(&quot;C:/Users/cmffe/OneDrive - Vestas Wind Systems A S/Documents/R/Practi
 ## 2282 kurtosis_roll_arm a double #DIV/0! 'pml-training.csv'
 ## .... ................. ........ ....... ..................
 ## See problems(...) for more details.</code></pre>
+<pre class="r"><code>final_test &lt;- read_csv(&quot;pml-testing.csv&quot;, col_names = TRUE)</code></pre>
+<pre><code>## Warning: Missing column names filled in: 'X1' [1]</code></pre>
 </div>
 <div id="performing-data-partition" class="section level2">
 <h2>3. Performing Data Partition</h2>
@@ -325,6 +327,12 @@ A</code></pre>
 <pre class="r"><code>sum(diag(A))/sum(A)</code></pre>
 <pre><code>## [1] 0.9620795</code></pre>
 <p>Processing time is considerably higher but it is a good trade off for the increase in accuracy, therefore we will use this option.</p>
+</div>
+<div id="final-prediction" class="section level2">
+<h2>7. Final Prediction</h2>
+<pre class="r"><code>predict(modelFit, final_test)</code></pre>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
 </div>
 </div>
 
